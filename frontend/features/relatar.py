@@ -63,7 +63,8 @@ def validar_entrada(descricao: str, bairro: str | None, referencia: str, consent
 def _formulario() -> None:
     etapas(0)
     try:
-        bairros = [b["nome"] for b in carregar_bairros()]
+        with st.spinner("Conectando ao serviço. Na primeira visita isso pode levar até 1 minuto."):
+            bairros = [b["nome"] for b in carregar_bairros()]
     except ErroAPI as e:
         mostrar_erro(e, "A lista de bairros é necessária para registrar o relato.")
         if st.button("Tentar de novo", key="retry_bairros"):

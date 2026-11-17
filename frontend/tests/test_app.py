@@ -19,7 +19,7 @@ def app_sem_api(monkeypatch):
     api_client.obter_cliente.clear()
     api_client.carregar_bairros.clear()
     api_client.carregar_relatos_publicos.clear()
-    api_client.verificar_saude.clear()
+    api_client._saude_ok.clear()
     return AppTest.from_file(APP, default_timeout=20)
 
 
@@ -44,3 +44,21 @@ def test_validacao_no_front_antes_de_chamar_a_api():
     assert set(erros) == {"Descrição", "Bairro", "Privacidade"}
     assert validar_entrada("Tem um buraco enorme na rua da escola", "Mooca", "", True) == {}
     assert "Ponto de referência" in validar_entrada("Tem um buraco enorme na rua", "Mooca", "x" * 151, True)
+
+
+def test_api_acordando_mostra_mensagem_de_inicio_e_nao_erro_generico():
+    """A plataforma devolve HTML com 503 enquanto a API sai da hibernação."""
+    import httpx
+
+    from providers.api_client import ClienteZelo, ErroAPI
+
+    def resposta(_):
+        return httpx.Response(503, text="<html>Service Unavailable</html>", headers={"content-type": "text/html"})
+
+    cliente = ClienteZelo("http://api.teste")
+    cliente._http = httpx.Client(base_url="http://api.teste", transport=httpx.MockTransport(resposta))
+    with pytest.raises(ErroAPI) as exc:
+        cliente.bairros()
+    assert exc.value.codigo == "API_INICIANDO"
+    assert "iniciando" in exc.value.mensagem
+    assert "<html" not in exc.value.mensagem

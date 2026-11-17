@@ -24,6 +24,12 @@ class ErroAPI(Exception):
 _MSG_FORA_DO_AR = "Não conseguimos falar com o serviço agora. Verifique sua internet ou tente de novo em alguns minutos."
 _MSG_TIMEOUT = "O serviço está demorando mais que o normal para responder. Tente novamente em instantes."
 _MSG_INVALIDA = "Recebemos uma resposta inesperada do serviço. Tente novamente."
+_MSG_INICIANDO = (
+    "O serviço está iniciando, o que pode levar até 1 minuto na primeira visita. "
+    "Aguarde um pouco e tente de novo."
+)
+# Tempo máximo para a API sair da hibernação (plano gratuito do Render).
+TIMEOUT_ACORDAR_S = 60
 
 _CAMPOS_ANALISE = {"analise_id", "categoria", "urgencia", "resumo", "orientacoes_cidadao", "orgao_responsavel"}
 
@@ -44,6 +50,9 @@ class ClienteZelo:
         try:
             corpo = r.json()
         except ValueError as e:
+            # A plataforma devolve uma página HTML (502/503/504) enquanto a API acorda.
+            if r.status_code in (502, 503, 504):
+                raise ErroAPI(_MSG_INICIANDO, "API_INICIANDO") from e
             raise ErroAPI(_MSG_INVALIDA, "RESPOSTA_INVALIDA") from e
 
         if r.is_error:
@@ -57,10 +66,11 @@ class ClienteZelo:
 
     # ---------------------------------------------------------------- cidadão
     def saude(self) -> dict:
-        return self._requisitar("GET", "/health", timeout=3)
+        return self._requisitar("GET", "/health", timeout=5)
 
     def bairros(self) -> list[dict]:
-        return self._requisitar("GET", "/api/v1/bairros")
+        # Primeira chamada de uma visita: pode precisar acordar a API.
+        return self._requisitar("GET", "/api/v1/bairros", timeout=TIMEOUT_ACORDAR_S)
 
     def analisar(self, descricao: str, bairro: str, referencia: str | None) -> dict:
         corpo = {"descricao": descricao, "bairro": bairro, "referencia": referencia or None}
@@ -81,7 +91,7 @@ class ClienteZelo:
         params: dict = {"incluir_simulados": incluir_simulados}
         if dias:
             params["dias"] = dias
-        return self._requisitar("GET", "/api/v1/relatos", params=params)
+        return self._requisitar("GET", "/api/v1/relatos", params=params, timeout=TIMEOUT_ACORDAR_S)
 
     def obter_relato(self, protocolo: str) -> dict:
         return self._requisitar("GET", f"/api/v1/relatos/{protocolo}")
@@ -127,8 +137,16 @@ def carregar_relatos_publicos(incluir_simulados: bool) -> list[dict]:
 
 
 @st.cache_data(ttl=20, show_spinner=False)
+def _saude_ok() -> bool:
+    # Só o resultado "online" fica em cache. Se falhar, a exceção impede o cache
+    # e a próxima interação testa de novo (a API pode ter acabado de acordar).
+    if obter_cliente().saude().get("status") != "ok":
+        raise ErroAPI(_MSG_FORA_DO_AR, "API_FORA_DO_AR")
+    return True
+
+
 def verificar_saude() -> bool:
     try:
-        return obter_cliente().saude().get("status") == "ok"
+        return _saude_ok()
     except ErroAPI:
         return False

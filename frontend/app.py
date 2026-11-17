@@ -21,29 +21,40 @@ sessao.inicializar()
 aplicar_tema(st.session_state.alto_contraste, st.session_state.fonte_grande)
 
 # ------------------------------------------------------------- cabeçalho
-online = verificar_saude()
-situacao = (
-    '<span class="zl-situacao" style="--c:#1E7B34">Serviço online</span>'
-    if online
-    else '<span class="zl-situacao" style="--c:#B3261E">Serviço indisponível no momento</span>'
-)
-st.markdown(
-    f"""
-    <header class="zl-cabecalho">
-      <div class="zl-marca">
-        <span class="zl-placa zl-placa--logo">Zelo</span>
-        <div class="zl-marca__texto">
-          <strong>Zeladoria urbana de São Paulo</strong>
-          <span>Registre problemas em ruas, calçadas e praças e acompanhe o atendimento pelo protocolo.</span>
-        </div>
-      </div>
-      {situacao}
-    </header>
-    """,
-    unsafe_allow_html=True,
-)
-if not online:
-    st.caption("Você pode consultar as informações, mas o envio de relatos pode falhar até o serviço voltar.")
+# O espaço fica reservado no topo e é preenchido por último, para mostrar o estado
+# real do serviço depois de a tela principal ter acordado a API (plano gratuito).
+espaco_cabecalho = st.empty()
+
+
+def desenhar_cabecalho() -> None:
+    online = verificar_saude()
+    situacao = (
+        '<span class="zl-situacao" style="--c:#1E7B34">Serviço online</span>'
+        if online
+        else '<span class="zl-situacao" style="--c:#B3261E">Serviço indisponível no momento</span>'
+    )
+    aviso = (
+        ""
+        if online
+        else '<p class="zl-rodape">Você pode consultar as informações, mas o envio de relatos pode falhar até o serviço voltar.</p>'
+    )
+    espaco_cabecalho.markdown(
+        f"""
+        <header class="zl-cabecalho">
+          <div class="zl-marca">
+            <span class="zl-placa zl-placa--logo">Zelo</span>
+            <div class="zl-marca__texto">
+              <strong>Zeladoria urbana de São Paulo</strong>
+              <span>Registre problemas em ruas, calçadas e praças e acompanhe o atendimento pelo protocolo.</span>
+            </div>
+          </div>
+          {situacao}
+        </header>
+        {aviso}
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # --------------------------------------------------------- barra lateral
 with st.sidebar:
@@ -85,3 +96,5 @@ if st.session_state.perfil == "Gestor":
 for aba, tela in zip(st.tabs(nomes), telas):
     with aba:
         tela()
+
+desenhar_cabecalho()

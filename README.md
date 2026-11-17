@@ -10,9 +10,9 @@ Projeto da Global Solution 2026.2 da FIAP (CitizenTech), disciplina de Front-End
 - Aplicação: https://zelo-web-vlb4.onrender.com
 - API (documentação): https://zelo-api-fxru.onrender.com/docs
 - Vídeo: `PREENCHER`
-- Equipe: `PREENCHER (nome e RM)`
+- Equipe: Gabriel Palmeira (RM 563522) e Mayara Mota (RM 563887)
 
-> O plano gratuito do Render hiberna sem uso. O primeiro acesso pode levar cerca de 50 segundos.
+> O plano gratuito do Render hiberna sem uso. No primeiro acesso, o site pode levar até 1 minuto para carregar. É só aguardar.
 
 ## O problema
 
@@ -113,7 +113,7 @@ Testes:
 
 ```bash
 cd backend && pytest -q     # 33 testes da API e dos pipelines, sem internet
-cd frontend && pytest -q    # 3 testes da interface
+cd frontend && pytest -q    # 4 testes da interface
 python scripts/avaliar_casos.py --api http://localhost:8000   # casos de teste com o LLM real
 ```
 
