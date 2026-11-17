@@ -1,15 +1,16 @@
-"""Zelo — zeladoria urbana com IA (front-end Streamlit).
+"""Zelo, zeladoria urbana com IA (front-end Streamlit).
 
 Rodar localmente (a partir da pasta frontend/):
     streamlit run app.py
 
-Este arquivo só monta o layout (sidebar + abas). Cada tela vive em features/,
-componentes visuais em ui/, estado em state/ e o acesso à API em providers/.
+Este arquivo só monta o layout (cabeçalho, barra lateral e abas). Cada tela
+vive em features/, componentes visuais em ui/, estado em state/ e o acesso
+à API em providers/.
 """
 
 import streamlit as st
 
-st.set_page_config(page_title="Zelo · Zeladoria urbana com IA", page_icon="🏙️", layout="wide")
+st.set_page_config(page_title="Zelo | Zeladoria urbana de São Paulo", page_icon=":material/signpost:", layout="wide")
 
 from features import gestor, meus_relatos, painel, relatar, sobre  # noqa: E402
 from providers.api_client import verificar_saude  # noqa: E402
@@ -17,28 +18,44 @@ from state import sessao  # noqa: E402
 from ui.tema import aplicar_tema  # noqa: E402
 
 sessao.inicializar()
+aplicar_tema(st.session_state.alto_contraste, st.session_state.fonte_grande)
 
-# ------------------------------------------------------------------ sidebar
+# ------------------------------------------------------------- cabeçalho
+online = verificar_saude()
+situacao = (
+    '<span class="zl-situacao" style="--c:#1E7B34">Serviço online</span>'
+    if online
+    else '<span class="zl-situacao" style="--c:#B3261E">Serviço indisponível no momento</span>'
+)
+st.markdown(
+    f"""
+    <header class="zl-cabecalho">
+      <div class="zl-marca">
+        <span class="zl-placa zl-placa--logo">Zelo</span>
+        <div class="zl-marca__texto">
+          <strong>Zeladoria urbana de São Paulo</strong>
+          <span>Registre problemas em ruas, calçadas e praças e acompanhe o atendimento pelo protocolo.</span>
+        </div>
+      </div>
+      {situacao}
+    </header>
+    """,
+    unsafe_allow_html=True,
+)
+if not online:
+    st.caption("Você pode consultar as informações, mas o envio de relatos pode falhar até o serviço voltar.")
+
+# --------------------------------------------------------- barra lateral
 with st.sidebar:
-    st.markdown("## 🏙️ Zelo")
-    st.caption("Sua rua, cuidada. Relate problemas da cidade e acompanhe a solução.")
-
-    if verificar_saude():
-        st.markdown("🟢 **Serviço online**")
-    else:
-        st.markdown("🔴 **Serviço indisponível no momento**")
-        st.caption("Você ainda pode ver as informações, mas o envio de relatos pode falhar.")
-
-    st.divider()
-    st.radio("Entrar como", ["Cidadão", "Gestor"], key="perfil", horizontal=True)
+    st.radio("Acessar como", ["Cidadão", "Gestor"], key="perfil", horizontal=True)
     if st.session_state.perfil == "Gestor":
         with st.form("login_gestor", clear_on_submit=True):
             token = st.text_input("Código de acesso da equipe", type="password")
             if st.form_submit_button("Entrar"):
                 st.session_state.gestor_token = token or None
         if st.session_state.gestor_token:
-            st.caption("🔓 Acesso de gestor ativo nesta sessão.")
-            if st.button("Sair"):
+            st.caption("Acesso de gestor ativo nesta sessão.")
+            if st.button("Sair da área de gestão"):
                 st.session_state.gestor_token = None
                 st.rerun()
 
@@ -48,23 +65,21 @@ with st.sidebar:
     st.toggle("Fonte maior", key="fonte_grande")
 
     st.divider()
-    st.caption("Emergência: 190 Polícia · 192 SAMU · 193 Bombeiros · 199 Defesa Civil")
-    st.caption("Protótipo acadêmico · FIAP Global Solution 2026.2 · CitizenTech")
+    st.markdown("**Em caso de emergência**")
+    st.markdown(
+        '<dl class="zl-telefones"><dt>Polícia Militar</dt><dd>190</dd><dt>SAMU</dt><dd>192</dd>'
+        "<dt>Bombeiros</dt><dd>193</dd><dt>Defesa Civil</dt><dd>199</dd></dl>",
+        unsafe_allow_html=True,
+    )
+    st.divider()
+    st.markdown('<p class="zl-rodape">Protótipo acadêmico da FIAP para a Global Solution 2026.2.</p>',
+                unsafe_allow_html=True)
 
-aplicar_tema(st.session_state.alto_contraste, st.session_state.fonte_grande)
-
-# --------------------------------------------------------------- cabeçalho
-st.markdown(
-    '<div class="zelo-hero"><h1>Zelo</h1><p>Viu um buraco, um poste apagado ou uma calçada quebrada? '
-    "Conte aqui. A IA organiza o pedido, você confere e a Prefeitura recebe tudo pronto para agir.</p></div>",
-    unsafe_allow_html=True,
-)
-
-# -------------------------------------------------------------------- abas
-nomes = ["📝 Relatar", "📋 Meus relatos", "📊 Painel da cidade", "ℹ️ Como funciona"]
+# ------------------------------------------------------------------ abas
+nomes = ["Registrar problema", "Meus protocolos", "Painel da cidade", "Como funciona"]
 telas = [relatar.render, meus_relatos.render, painel.render, sobre.render]
 if st.session_state.perfil == "Gestor":
-    nomes.insert(3, "🛠️ Gestão")
+    nomes.insert(3, "Gestão")
     telas.insert(3, gestor.render)
 
 for aba, tela in zip(st.tabs(nomes), telas):

@@ -8,8 +8,8 @@
 
 | | |
 |---|---|
-| 🌐 **Deploy (front)** | `PREENCHER: https://zelo-web.onrender.com` |
-| 🔌 **Deploy (API / docs)** | `PREENCHER: https://zelo-api.onrender.com/docs` |
+| 🌐 **Deploy (front)** | https://zelo-web-vlb4.onrender.com |
+| 🔌 **Deploy (API / docs)** | https://zelo-api-fxru.onrender.com/docs |
 | 🎬 **Vídeo (até 5 min)** | `PREENCHER: link do YouTube (não listado)` |
 | 👥 **Equipe** | `PREENCHER: Nome – RM` · `Nome – RM` · `Nome – RM` |
 
@@ -261,12 +261,12 @@ Modelo `gpt-5.4-mini`, prompt `v1.4`: **8/8 acertos, latência média de 3,1 s.*
 
 ## 7. Acessibilidade aplicada
 
-- [x] **Urgência nunca depende só da cor:** cada nível tem cor, ícone e texto (⛔ Crítica, ⚠️ Alta, 🔶 Média, ✅ Baixa) e `aria-label`.
+- [x] **Urgência nunca depende só da cor:** cada nível tem cor, **forma de placa de trânsito** (octógono para crítica, triângulo para alta, losango para média, quadrado para baixa) e o nome escrito.
 - [x] **Contraste WCAG AA verificado** (texto branco sobre a cor): Crítica 6,5:1 · Alta 5,4:1 · Média 5,9:1 · Baixa 5,3:1 (mínimo exigido: 4,5:1).
 - [x] **Gráficos com textura e símbolos** (`pattern_shape`, `symbol`), além das cores, para pessoas daltônicas.
 - [x] **Rótulos claros e texto de ajuda** em todos os campos; campos obrigatórios marcados com `*`.
-- [x] **Linguagem simples**, sem jargão: "Quem resolve", "O que fazer enquanto isso".
-- [x] **Alto contraste** (fundo preto, texto branco, destaques amarelos) e **fonte maior**, ligáveis na sidebar.
+- [x] **Linguagem simples**, sem jargão: "Órgão responsável", "Orientações até o reparo".
+- [x] **Alto contraste** (mantém o fundo branco, com texto preto puro, bordas de 2 px e links sublinhados) e **fonte maior**, ligáveis na barra lateral.
 - [x] **Leitura em voz alta** das orientações (Web Speech API, pt-BR).
 - [x] **Navegação por teclado** com foco sempre visível (contorno de 3 px).
 - [x] **Mensagens de erro específicas** por campo, dizendo como corrigir.
@@ -293,7 +293,7 @@ Modelo `gpt-5.4-mini`, prompt `v1.4`: **8/8 acertos, latência média de 3,1 s.*
 - ✅ **Perfis (RBAC):** visão do cidadão e visão do gestor, que trata as solicitações
 - ✅ **Testes automatizados:** 33 testes pytest no back (sem subir a interface) e 3 testes de interface
 - ✅ **Acessibilidade avançada:** leitura em voz alta, alto contraste, navegação por teclado, checklist WCAG
-- ✅ **Identidade e storytelling:** nome, tema e jornada guiada em 3 passos (conte → confira → protocolo)
+- ✅ **Identidade visual própria:** a marca e o número do protocolo seguem as placas de rua de São Paulo (azul, letra branca, filete interno), com a fonte Public Sans, criada para serviços públicos, e jornada guiada em 3 etapas
 
 ## 10. Integração com as outras disciplinas da GS
 

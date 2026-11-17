@@ -3,50 +3,53 @@
 import streamlit as st
 
 from ui.componentes import badge_urgencia
-from ui.rotulos import ORDEM_URGENCIA
+from ui.rotulos import ORDEM_URGENCIA, URGENCIAS
 
 
 def render() -> None:
-    st.subheader("ℹ️ Como o Zelo funciona")
-    c1, c2 = st.columns(2)
+    c1, c2 = st.columns(2, gap="large")
     with c1:
+        st.markdown("#### Como funciona")
         st.markdown(
             """
-**Em 3 passos**
-1. Você conta o problema com suas palavras.
-2. A inteligência artificial sugere o tipo, a urgência e quem resolve. **Você confere e pode corrigir.**
-3. Você recebe um protocolo para acompanhar.
-
-**Seus dados**
-- Telefone, CPF, e-mail e placas são **apagados automaticamente** antes da análise.
-- Não pedimos seu nome nem seu endereço.
-- O painel público mostra só o resumo, nunca o seu texto.
+1. Você descreve o problema com suas palavras e informa o bairro.
+2. A inteligência artificial indica o tipo, a urgência e o órgão responsável. Você confere e pode corrigir.
+3. Você recebe um protocolo para acompanhar o atendimento.
+"""
+        )
+        st.markdown("#### Seus dados")
+        st.markdown(
+            """
+- Telefone, CPF, e-mail e placas de veículo são removidos do texto antes da análise.
+- O serviço não pede seu nome nem seu endereço.
+- O painel público mostra apenas o resumo do problema, nunca o texto que você escreveu.
 """
         )
     with c2:
+        st.markdown("#### Limites da inteligência artificial")
         st.markdown(
             """
-**O que a IA NÃO faz**
-- Não substitui a Defesa Civil, os Bombeiros ou a Polícia.
-- Não garante prazo: os prazos mostrados são de referência.
-- Pode errar. Por isso, **você sempre confirma** antes de gerar o protocolo, e a equipe da Prefeitura revisa.
-
-**Emergência?** 190 Polícia · 192 SAMU · 193 Bombeiros · 199 Defesa Civil
+- Não substitui a Defesa Civil, os Bombeiros nem a Polícia.
+- Os prazos exibidos são de referência e não garantem a data do reparo.
+- A IA pode errar. Por isso você confirma a análise antes do protocolo, e a equipe da Prefeitura revisa o pedido.
 """
         )
-    st.markdown("**Como lemos a urgência**")
-    st.markdown(
-        " ".join(badge_urgencia(u, grande=True) for u in ORDEM_URGENCIA),
-        unsafe_allow_html=True,
-    )
-    st.caption("Cada nível tem cor, ícone e nome, para não depender só da cor.")
+        st.markdown("#### Níveis de urgência")
+        linhas = "".join(
+            f'<div style="display:flex;align-items:center;gap:12px;margin:0 0 10px">{badge_urgencia(u)}'
+            f'<span style="color:var(--zl-asfalto)">{URGENCIAS[u]["descricao"]}</span></div>'
+            for u in ORDEM_URGENCIA
+        )
+        st.markdown(linhas, unsafe_allow_html=True)
+        st.caption("Cada nível tem cor, forma de placa de trânsito e nome escrito, para não depender só da cor.")
+
     with st.expander("Recursos de acessibilidade"):
         st.markdown(
             """
-- Alto contraste e fonte maior (barra lateral).
+- Alto contraste e fonte maior, na barra lateral.
 - Leitura em voz alta das orientações.
-- Navegação por teclado com foco visível.
-- Urgência indicada por cor **e** ícone **e** texto; gráficos com texturas, além de cores.
-- Rótulos e textos de ajuda em todos os campos, em linguagem simples.
+- Navegação por teclado com foco sempre visível.
+- Urgência indicada por cor, forma e nome; gráficos com texturas e símbolos além das cores.
+- Rótulos e textos de ajuda em todos os campos.
 """
         )

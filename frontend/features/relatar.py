@@ -13,7 +13,7 @@ import streamlit as st
 
 from providers.api_client import ErroAPI, carregar_bairros, carregar_relatos_publicos, obter_cliente
 from state import sessao
-from ui.componentes import botao_ouvir, mostrar_badge_urgencia, mostrar_erro
+from ui.componentes import badge_urgencia, botao_ouvir, dados, etapas, mostrar_erro, placa_protocolo
 from ui.rotulos import CATEGORIAS, ORDEM_URGENCIA, rotulo_categoria, rotulo_urgencia
 
 MIN_CARACTERES, MAX_CARACTERES, MAX_REFERENCIA = 20, 1000, 150
@@ -45,68 +45,63 @@ def validar_entrada(descricao: str, bairro: str | None, referencia: str, consent
     erros: dict[str, str] = {}
     texto = descricao.strip()
     if not texto:
-        erros["Descrição"] = "Conte o que está acontecendo."
+        erros["Descrição"] = "Descreva o que está acontecendo."
     elif len(texto) < MIN_CARACTERES or len(texto.split()) < 4:
-        erros["Descrição"] = f"Escreva um pouco mais (mínimo de {MIN_CARACTERES} letras e 4 palavras)."
+        erros["Descrição"] = f"Escreva pelo menos {MIN_CARACTERES} caracteres e 4 palavras."
     elif len(texto) > MAX_CARACTERES:
-        erros["Descrição"] = f"O texto passou do limite de {MAX_CARACTERES} caracteres."
+        erros["Descrição"] = f"Reduza o texto para até {MAX_CARACTERES} caracteres."
     if not bairro:
         erros["Bairro"] = "Escolha o bairro onde está o problema."
     if len(referencia.strip()) > MAX_REFERENCIA:
-        erros["Ponto de referência"] = f"Use no máximo {MAX_REFERENCIA} caracteres."
+        erros["Ponto de referência"] = f"Use até {MAX_REFERENCIA} caracteres."
     if not consentiu:
-        erros["Privacidade"] = "Para continuar, marque que você leu como seus dados são tratados."
+        erros["Privacidade"] = "Marque a caixa de concordância para enviar o relato."
     return erros
-
-
-def _etapas_visuais(atual: int) -> None:
-    nomes = ["1. Conte o problema", "2. Confira a análise", "3. Receba o protocolo"]
-    partes = [f"**{n}**" if i == atual else f"<span style='opacity:.6'>{n}</span>" for i, n in enumerate(nomes)]
-    st.markdown(" → ".join(partes), unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------- etapa 1
 def _formulario() -> None:
-    _etapas_visuais(0)
+    etapas(0)
     try:
         bairros = [b["nome"] for b in carregar_bairros()]
     except ErroAPI as e:
-        mostrar_erro(e, "Sem a lista de bairros não conseguimos registrar o relato agora.")
+        mostrar_erro(e, "A lista de bairros é necessária para registrar o relato.")
         if st.button("Tentar de novo", key="retry_bairros"):
             carregar_bairros.clear()
             st.rerun()
         return
 
-    with st.expander("💡 Não sabe como escrever? Use um exemplo"):
+    with st.expander("Ver exemplos de relato"):
+        st.caption("Escolha um exemplo para preencher o formulário.")
         cols = st.columns(len(EXEMPLOS))
-        for col, (nome, dados) in zip(cols, EXEMPLOS.items()):
-            col.button(nome, key=f"ex_{nome}", on_click=sessao.preencher_exemplo, args=dados, width="stretch")
+        for col, (nome, valores) in zip(cols, EXEMPLOS.items()):
+            col.button(nome, key=f"ex_{nome}", on_click=sessao.preencher_exemplo, args=valores, width="stretch")
 
-    with st.form("form_relato", clear_on_submit=False, enter_to_submit=False):
+    with st.form("form_relato", clear_on_submit=False, enter_to_submit=False, border=False):
         descricao = st.text_area(
-            "O que está acontecendo? *",
+            "Descreva o problema *",
             key="campo_descricao",
             max_chars=MAX_CARACTERES,
-            height=140,
-            placeholder="Ex.: Tem um buraco grande na rua em frente à escola e os carros estão desviando pela calçada.",
-            help="Conte com suas palavras: o que é, há quanto tempo, se oferece perigo.",
+            height=150,
+            placeholder="Por exemplo: há um buraco grande na rua em frente à escola e os carros desviam pela calçada.",
+            help="Diga o que é, há quanto tempo está assim e se oferece perigo.",
         )
         c1, c2 = st.columns(2)
         bairro = c1.selectbox(
             "Bairro *", bairros, key="campo_bairro", index=None, placeholder="Escolha o bairro",
-            help="Usamos o bairro para encaminhar o pedido e consultar a previsão de chuva da região.",
+            help="Usado para encaminhar o pedido e consultar a previsão de chuva da região.",
         )
         referencia = c2.text_input(
-            "Ponto de referência (opcional)", key="campo_referencia", max_chars=MAX_REFERENCIA,
-            placeholder="Ex.: em frente à padaria", help="Não informe seu endereço residencial.",
+            "Ponto de referência", key="campo_referencia", max_chars=MAX_REFERENCIA,
+            placeholder="Por exemplo: em frente à padaria", help="Opcional. Não informe seu endereço residencial.",
         )
         consentiu = st.checkbox(
-            "Li e concordo: meu relato será analisado por inteligência artificial. "
-            "Telefone, CPF, e-mail e placas são removidos automaticamente antes da análise.",
+            "Concordo que o relato seja analisado por inteligência artificial. Telefone, CPF, e-mail e "
+            "placas de veículo são removidos do texto antes da análise.",
             key="campo_consentimento",
         )
-        st.caption("* campos obrigatórios")
-        enviado = st.form_submit_button("Analisar meu relato", type="primary", width="stretch")
+        st.caption("Campos com * são obrigatórios.")
+        enviado = st.form_submit_button("Analisar relato", type="primary")
 
     if not enviado:
         return
@@ -114,25 +109,25 @@ def _formulario() -> None:
     erros = validar_entrada(descricao, bairro, referencia, consentiu)
     if erros:
         st.error(
-            "**Falta pouco! Ajuste os itens abaixo:**\n\n" + "\n".join(f"- **{c}**: {m}" for c, m in erros.items()),
-            icon="✏️",
+            "**Revise os campos abaixo para continuar.**\n\n" + "\n".join(f"- **{c}**: {m}" for c, m in erros.items()),
+            icon=":material/edit_note:",
         )
         return
 
     entrada = {"descricao": descricao.strip(), "bairro": bairro, "referencia": referencia.strip() or None}
     inicio = time.perf_counter()
-    # Design para latência: o cidadão vê que algo está acontecendo e por quê.
-    with st.status("Analisando seu relato… isso leva alguns segundos.", expanded=True) as status:
-        st.write("🔒 Enviando com segurança e removendo dados pessoais")
-        st.write("🌦️ Consultando a previsão de chuva do bairro")
-        st.write("🤖 Inteligência artificial classificando o problema")
+    # Design para latência: o cidadão vê o que está acontecendo durante a espera.
+    with st.status("Analisando o relato. Isso leva alguns segundos.", expanded=True) as status:
+        st.write("Removendo dados pessoais do texto")
+        st.write("Consultando a previsão de chuva do bairro")
+        st.write("Classificando o tipo e a urgência do problema")
         try:
             analise = obter_cliente().analisar(**entrada)
         except ErroAPI as e:
-            status.update(label="Não foi possível analisar agora", state="error", expanded=False)
-            mostrar_erro(e, "Seu texto continua salvo no formulário. Você pode tentar de novo.")
+            status.update(label="A análise não foi concluída", state="error", expanded=False)
+            mostrar_erro(e, "O texto continua no formulário para você tentar de novo.")
             return
-        status.update(label=f"Análise pronta em {time.perf_counter() - inicio:.1f} s", state="complete", expanded=False)
+        status.update(label=f"Análise concluída em {time.perf_counter() - inicio:.1f} s", state="complete", expanded=False)
 
     sessao.iniciar_revisao(entrada, analise)
     st.rerun()
@@ -140,68 +135,62 @@ def _formulario() -> None:
 
 # ---------------------------------------------------------------- etapa 2
 def _revisao() -> None:
-    _etapas_visuais(1)
+    etapas(1)
     analise, entrada = st.session_state.analise_atual, st.session_state.entrada_atual
 
     if analise["risco_imediato"]:
         st.error(
-            "**Possível risco imediato.** Afaste-se do local. Em caso de perigo agora, ligue "
-            "**199 (Defesa Civil)** ou **193 (Bombeiros)**.",
-            icon="⛔",
+            "**Possível risco imediato.** Afaste-se do local. Se houver perigo agora, ligue para a "
+            "Defesa Civil (199) ou para os Bombeiros (193).",
+            icon=":material/warning:",
         )
     if analise["fora_do_escopo"]:
         st.warning(
-            "Este canal é para problemas em ruas, calçadas e espaços públicos. Pelo que entendemos, seu relato "
-            "parece ser de outro tipo. Emergências: **190** Polícia · **192** SAMU · **193** Bombeiros.",
-            icon="🧭",
+            "Este serviço trata de problemas em ruas, calçadas e espaços públicos, e o relato parece ser de outro "
+            "tipo. Em emergências, ligue para a Polícia Militar (190), o SAMU (192) ou os Bombeiros (193).",
+            icon=":material/info:",
         )
 
     with st.container(border=True):
-        st.markdown("#### O que entendemos do seu relato")
-        st.markdown(f"> {html.escape(analise['resumo'])}")
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.markdown("**Tipo de problema**")
-            st.markdown(rotulo_categoria(analise["categoria"]))
-        with c2:
-            st.markdown("**Urgência**")
-            mostrar_badge_urgencia(analise["urgencia"], grande=True)
-        with c3:
-            st.markdown("**Quem resolve**")
-            st.markdown(html.escape(analise["orgao_responsavel"]))
-        st.markdown(f"**Por que essa urgência?** {html.escape(analise['justificativa_urgencia'])}")
-        st.caption(f"Prazo de referência do protótipo: até {analise['prazo_estimado_dias']} dia(s).")
-
-        st.markdown("**O que fazer enquanto isso:**")
+        st.markdown("#### Resultado da análise")
+        st.markdown(f"{html.escape(analise['resumo'])}")
+        dados([
+            ("Tipo de problema", html.escape(rotulo_categoria(analise["categoria"]))),
+            ("Urgência", badge_urgencia(analise["urgencia"])),
+            ("Órgão responsável", html.escape(analise["orgao_responsavel"])),
+            ("Prazo de referência", f"Até {analise['prazo_estimado_dias']} dia(s)"),
+        ])
+        st.markdown(f"**Motivo da urgência.** {html.escape(analise['justificativa_urgencia'])}")
+        st.markdown("**Orientações até o reparo**")
         for o in analise["orientacoes_cidadao"]:
             st.markdown(f"- {html.escape(o)}")
 
-        detalhes = []
+        notas = []
         if analise.get("dados_pessoais_removidos"):
-            detalhes.append("🔒 Para proteger você, removemos do texto: " + ", ".join(analise["dados_pessoais_removidos"]) + ".")
+            notas.append("Removemos do texto, por privacidade: " + ", ".join(analise["dados_pessoais_removidos"]) + ".")
         if analise.get("contexto_clima"):
             cl = analise["contexto_clima"]
-            detalhes.append(f"🌦️ Previsão de chuva hoje no bairro: {cl['chuva_prevista_mm']:.1f} mm (fonte: {cl['fonte']}).")
-        for ajuste in analise.get("ajustes_por_regra", []):
-            detalhes.append(f"📐 {ajuste}")
-        for d in detalhes:
-            st.caption(d)
+            notas.append(f"Previsão de chuva hoje no bairro: {cl['chuva_prevista_mm']:.1f} mm, segundo o {cl['fonte']}.")
+        notas.extend(analise.get("ajustes_por_regra", []))
+        for n in notas:
+            st.caption(n)
 
     if analise["precisa_revisao_humana"]:
         st.warning(
-            "**A IA não teve total certeza. Confira com atenção antes de confirmar:**\n\n"
+            "**Confira com atenção antes de confirmar.**\n\n"
             + "\n".join(f"- {html.escape(m)}" for m in analise["motivos_revisao"]),
-            icon="🧐",
+            icon=":material/fact_check:",
         )
 
     # ------------------- human-in-the-loop ---------------------------------
     st.markdown("#### A análise está correta?")
     escolha = st.radio(
         "Confirme ou corrija antes de gerar o protocolo",
-        ["Sim, está correto", "Quero corrigir"],
+        ["Sim, está correta", "Quero corrigir"],
         horizontal=True,
         key="hitl_escolha",
         index=1 if analise["precisa_revisao_humana"] else 0,
+        label_visibility="collapsed",
     )
     categoria_final, urgencia_final = analise["categoria"], analise["urgencia"]
     if escolha == "Quero corrigir":
@@ -215,15 +204,15 @@ def _revisao() -> None:
             key="hitl_urg",
         )
 
-    b1, b2, b3 = st.columns([2, 1, 1])
+    b1, b2, b3, _ = st.columns([1.4, 1, 1, 1.6])
     confirmar = b1.button(
-        "✅ Confirmar e gerar protocolo", type="primary", width="stretch", disabled=analise["fora_do_escopo"]
+        "Confirmar e gerar protocolo", type="primary", width="stretch", disabled=analise["fora_do_escopo"]
     )
-    b2.button("✏️ Editar relato", on_click=sessao.voltar_para_edicao, width="stretch")
+    b2.button("Editar relato", on_click=sessao.voltar_para_edicao, width="stretch")
     b3.button("Cancelar", on_click=sessao.novo_relato, width="stretch")
 
     if confirmar:
-        with st.spinner("Registrando seu protocolo…"):
+        with st.spinner("Gerando o protocolo"):
             try:
                 relato = obter_cliente().confirmar(analise["analise_id"], categoria_final, urgencia_final)
             except ErroAPI as e:
@@ -233,43 +222,45 @@ def _revisao() -> None:
         sessao.concluir(relato, analise)
         st.rerun()
 
-    with st.expander("Ver o texto que você enviou"):
+    with st.expander("Texto enviado"):
         st.text(entrada["descricao"])
 
 
 # ---------------------------------------------------------------- etapa 3
 def _concluido() -> None:
-    _etapas_visuais(2)
+    etapas(2)
     relato = st.session_state.relato_confirmado
-    st.success("Relato registrado com sucesso!", icon="🎉")
-    with st.container(border=True):
-        st.markdown("Guarde o número do seu protocolo:")
-        st.markdown(f'<div class="zelo-protocolo">{html.escape(relato["protocolo"])}</div>', unsafe_allow_html=True)
-        mostrar_badge_urgencia(relato["urgencia"], grande=True)
-        st.markdown(
-            f"{rotulo_categoria(relato['categoria'])} · {html.escape(relato['bairro'])}  \n"
-            f"Encaminhado para: **{html.escape(relato['orgao_responsavel'])}**  \n"
-            f"Prazo de referência: **até {relato['prazo_estimado_dias']} dia(s)**"
-        )
-        if relato.get("ia_corrigida"):
-            st.caption("📝 Você corrigiu a análise da IA. Obrigado: isso ajuda a melhorar o sistema.")
-        orientacoes = relato.get("orientacoes_cidadao", [])
-        if orientacoes:
-            st.markdown("**Enquanto isso:**")
-            for o in orientacoes:
-                st.markdown(f"- {html.escape(o)}")
-            botao_ouvir(" ".join(orientacoes))
+    st.success("Protocolo gerado. O pedido foi encaminhado ao órgão responsável.", icon=":material/check_circle:")
+    placa_protocolo(relato["protocolo"])
+    st.caption("Guarde este número para acompanhar o atendimento na aba Meus protocolos.")
+    dados([
+        ("Tipo de problema", html.escape(rotulo_categoria(relato["categoria"]))),
+        ("Urgência", badge_urgencia(relato["urgencia"])),
+        ("Bairro", html.escape(relato["bairro"])),
+        ("Órgão responsável", html.escape(relato["orgao_responsavel"])),
+        ("Prazo de referência", f"Até {relato['prazo_estimado_dias']} dia(s)"),
+    ])
+    if relato.get("ia_corrigida"):
+        st.caption("Você corrigiu a análise da IA. A correção fica registrada e ajuda a melhorar o sistema.")
 
+    orientacoes = relato.get("orientacoes_cidadao", [])
+    if orientacoes:
+        st.markdown("**Orientações até o reparo**")
+        for o in orientacoes:
+            st.markdown(f"- {html.escape(o)}")
+        botao_ouvir(" ".join(orientacoes))
+
+    st.divider()
     avaliacao_ia(relato["protocolo"], chave="concluido")
-    st.button("➕ Registrar outro problema", on_click=sessao.novo_relato, type="primary")
+    st.button("Registrar outro problema", on_click=sessao.novo_relato, type="primary")
 
 
 def avaliacao_ia(protocolo: str, chave: str) -> None:
     """Segundo ponto de human-in-the-loop: o cidadão avalia a resposta da IA."""
     if sessao.feedback_de(protocolo):
-        st.caption("Obrigado pela sua avaliação! 💙")
+        st.caption("Avaliação registrada.")
         return
-    st.markdown("**A orientação da IA foi útil?**")
+    st.markdown("As orientações foram úteis?")
     valor = st.feedback("thumbs", key=f"fb_{chave}_{protocolo}")
     if valor is not None:
         avaliacao = "util" if valor == 1 else "incorreto"
@@ -277,11 +268,10 @@ def avaliacao_ia(protocolo: str, chave: str) -> None:
             obter_cliente().enviar_feedback(protocolo, sessao.comprovante_de(protocolo), avaliacao)
             sessao.registrar_feedback(protocolo, avaliacao)
             carregar_relatos_publicos.clear()
-            st.toast("Avaliação registrada. Obrigado!", icon="💙")
+            st.toast("Avaliação registrada.", icon=":material/check:")
         except ErroAPI as e:
             mostrar_erro(e)
 
 
 def render() -> None:
-    st.subheader("📝 Relatar um problema na cidade")
     {sessao.FORMULARIO: _formulario, sessao.REVISAO: _revisao, sessao.CONCLUIDO: _concluido}[sessao.etapa()]()

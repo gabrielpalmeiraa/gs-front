@@ -15,10 +15,9 @@ from ui.rotulos import ORDEM_URGENCIA, STATUS, rotulo_categoria, rotulo_status, 
 
 
 def render() -> None:
-    st.subheader("🛠️ Gestão de relatos")
     token = st.session_state.get("gestor_token")
     if not token:
-        estado_vazio("Área restrita", "Informe o código de acesso da equipe na barra lateral.", "🔐")
+        estado_vazio("Área restrita à equipe", "Informe o código de acesso da equipe na barra lateral.")
         return
 
     try:
@@ -30,13 +29,13 @@ def render() -> None:
         return
 
     abertos = [r for r in relatos if r["status"] not in ("resolvido", "rejeitado")]
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, _ = st.columns(4)
     with c1:
         metrica("Em aberto", len(abertos))
     with c2:
         metrica("Críticos em aberto", sum(r["urgencia"] == "critica" for r in abertos))
     with c3:
-        metrica("Com correção do cidadão", sum(bool(r["ia_corrigida"]) for r in relatos))
+        metrica("Corrigidos pelo cidadão", sum(bool(r["ia_corrigida"]) for r in relatos))
 
     status_filtro = st.multiselect(
         "Situação", list(STATUS), default=["recebido", "em_analise", "encaminhado"], format_func=rotulo_status,
@@ -46,43 +45,45 @@ def render() -> None:
     # Prioridade: urgência (crítica primeiro) e depois o mais antigo.
     fila.sort(key=lambda r: (ORDEM_URGENCIA.index(r["urgencia"]), r["criado_em"]))
     if not fila:
-        estado_vazio("Fila vazia", "Nenhum relato com essa situação. 🎉", "✅")
+        estado_vazio("Nenhum relato nesta situação", "Altere o filtro de situação para ver outros relatos.")
         return
 
+    st.markdown("##### Fila por prioridade")
     tabela = pd.DataFrame(fila)
     tabela["Urgência"] = tabela["urgencia"].map(rotulo_urgencia)
     tabela["Tipo"] = tabela["categoria"].map(rotulo_categoria)
     tabela["Situação"] = tabela["status"].map(rotulo_status)
-    tabela["IA corrigida?"] = tabela["ia_corrigida"].map({True: "Sim", False: "Não", 1: "Sim", 0: "Não"})
+    tabela["Corrigido pelo cidadão"] = tabela["ia_corrigida"].map({True: "Sim", False: "Não", 1: "Sim", 0: "Não"})
     st.dataframe(
-        tabela[["protocolo", "Urgência", "Tipo", "bairro", "Situação", "IA corrigida?"]].rename(
+        tabela[["protocolo", "Urgência", "Tipo", "bairro", "Situação", "Corrigido pelo cidadão"]].rename(
             columns={"protocolo": "Protocolo", "bairro": "Bairro"}
         ),
         hide_index=True, width="stretch",
     )
 
-    protocolo = st.selectbox("Abrir relato", [r["protocolo"] for r in fila], key="gs_sel")
+    st.markdown("##### Tratar relato")
+    protocolo = st.selectbox("Protocolo", [r["protocolo"] for r in fila], key="gs_sel")
     relato = next(r for r in fila if r["protocolo"] == protocolo)
     cartao_relato(relato, mostrar_descricao=True)
 
     if relato["ia_corrigida"]:
         st.info(
-            f"O cidadão corrigiu a IA: ela sugeriu **{rotulo_categoria(relato['categoria_ia'])}** / "
-            f"**{rotulo_urgencia(relato['urgencia_ia'])}** (confiança {relato['confianca_ia']:.0%}).",
-            icon="📝",
+            f"O cidadão corrigiu a IA. A sugestão original era {rotulo_categoria(relato['categoria_ia'])}, "
+            f"urgência {rotulo_urgencia(relato['urgencia_ia']).lower()}, com confiança de {relato['confianca_ia']:.0%}.",
+            icon=":material/edit_note:",
         )
     if relato.get("nota_gestor"):
         st.caption(f"Última nota da equipe: {html.escape(relato['nota_gestor'])}")
 
-    with st.form(f"form_status_{protocolo}"):
+    with st.form(f"form_status_{protocolo}", border=False):
         c1, c2 = st.columns([1, 2])
         novo = c1.selectbox("Nova situação", list(STATUS), index=list(STATUS).index(relato["status"]), format_func=rotulo_status)
-        nota = c2.text_input("Nota para o registro (opcional)", max_chars=300)
-        if st.form_submit_button("Salvar", type="primary"):
+        nota = c2.text_input("Nota para o registro", max_chars=300, placeholder="Opcional")
+        if st.form_submit_button("Salvar situação", type="primary"):
             try:
                 obter_cliente().gestor_atualizar(token, protocolo, novo, nota)
                 carregar_relatos_publicos.clear()
-                st.toast(f"{protocolo} atualizado para {rotulo_status(novo)}", icon="✅")
+                st.toast(f"Situação de {protocolo} salva como {rotulo_status(novo).lower()}.", icon=":material/check:")
                 st.rerun()
             except ErroAPI as e:
                 mostrar_erro(e)
