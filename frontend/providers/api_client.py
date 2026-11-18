@@ -7,6 +7,8 @@ mensagem pronta para mostrar ao cidadão, sem jargão e sem stack trace.
 
 from typing import Any
 
+import time
+
 import httpx
 import streamlit as st
 
@@ -150,3 +152,22 @@ def verificar_saude() -> bool:
         return _saude_ok()
     except ErroAPI:
         return False
+
+
+def aguardar_servico(limite_s: float = 90, pausa_s: float = 2) -> bool:
+    """Espera a API sair da hibernação (plano gratuito do Render), em vez de mostrar erro.
+
+    Tenta de novo enquanto a plataforma responde "iniciando" (timeout, 502/503/504).
+    Se a conexão for recusada de cara, a API está fora do ar de verdade: desiste na hora.
+    """
+    fim = time.monotonic() + limite_s
+    while True:
+        try:
+            if obter_cliente().saude().get("status") == "ok":
+                return True
+        except ErroAPI as e:
+            if e.codigo == "API_FORA_DO_AR":
+                return False
+        if time.monotonic() >= fim:
+            return False
+        time.sleep(pausa_s)

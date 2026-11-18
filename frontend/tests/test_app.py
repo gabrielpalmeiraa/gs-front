@@ -98,3 +98,38 @@ def test_fora_do_escopo_explica_bloqueio_e_esconde_prazo(app_sem_api):
 def test_fora_do_escopo_com_risco_mantem_telefones_de_emergencia(app_sem_api):
     at = _abrir_revisao(app_sem_api, _analise_fora_do_escopo(risco_imediato=True))
     assert "190" in " ".join(w.value for w in at.warning)
+
+
+def test_aguardar_servico_espera_a_api_acordar():
+    """Primeiro a plataforma devolve 503 (API acordando); depois responde ok."""
+    import httpx
+
+    from providers import api_client
+
+    chamadas = {"n": 0}
+
+    def resposta(_):
+        chamadas["n"] += 1
+        if chamadas["n"] < 3:
+            return httpx.Response(503, text="<html>acordando</html>", headers={"content-type": "text/html"})
+        return httpx.Response(200, json={"status": "ok"})
+
+    cliente = api_client.ClienteZelo("http://api.teste")
+    cliente._http = httpx.Client(base_url="http://api.teste", transport=httpx.MockTransport(resposta))
+    original = api_client.obter_cliente
+    api_client.obter_cliente = lambda: cliente
+    try:
+        assert api_client.aguardar_servico(limite_s=5, pausa_s=0) is True
+    finally:
+        api_client.obter_cliente = original
+    assert chamadas["n"] == 3
+
+
+def test_aguardar_servico_desiste_na_hora_se_conexao_recusada(app_sem_api):
+    import time
+
+    from providers import api_client
+
+    inicio = time.monotonic()
+    assert api_client.aguardar_servico(limite_s=60) is False
+    assert time.monotonic() - inicio < 5

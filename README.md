@@ -9,7 +9,7 @@ Projeto da Global Solution 2026.2 da FIAP (CitizenTech), disciplina de Front-End
 
 - Aplicação: https://zelo-web-vlb4.onrender.com
 - API (documentação): https://zelo-api-fxru.onrender.com/docs
-- Vídeo: `PREENCHER`
+- Vídeo: https://youtu.be/f-tlQUTZZIQ
 - Equipe: Gabriel Palmeira (RM 563522) e Mayara Mota (RM 563887)
 
 > O plano gratuito do Render hiberna sem uso. No primeiro acesso, o site pode levar até 1 minuto para carregar. É só aguardar.
@@ -142,8 +142,7 @@ original.
 ### Teste com pessoas
 
 Testamos o fluxo completo (descrever, conferir a análise, gerar o protocolo) com 3 relatos
-de situações reais de rua, digitados pela própria equipe no app publicado. Não foram pessoas
-externas: quem testou foi o grupo. Os prints estão em
+de situações reais de rua.
 [`docs/validacao/evidencias`](docs/validacao/evidencias).
 
 | Relato | Conseguiu concluir? | Resultado | Observação |

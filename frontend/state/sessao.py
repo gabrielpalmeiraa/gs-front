@@ -23,6 +23,7 @@ _PADROES = {
     "gestor_token": None,
     "alto_contraste": False,
     "fonte_grande": False,
+    "api_verificada": False,    # já esperamos a API acordar nesta sessão
     # widgets do formulário (chaves fixas permitem preencher com exemplo)
     "campo_descricao": "",
     "campo_bairro": None,

@@ -13,7 +13,7 @@ import streamlit as st
 st.set_page_config(page_title="Zelo | Zeladoria urbana de São Paulo", page_icon=":material/signpost:", layout="wide")
 
 from features import gestor, meus_relatos, painel, relatar, sobre  # noqa: E402
-from providers.api_client import verificar_saude  # noqa: E402
+from providers.api_client import aguardar_servico, verificar_saude  # noqa: E402
 from state import sessao  # noqa: E402
 from ui.tema import aplicar_tema  # noqa: E402
 
@@ -87,6 +87,12 @@ with st.sidebar:
                 unsafe_allow_html=True)
 
 # ------------------------------------------------------------------ abas
+# Na primeira visita a API pode estar hibernada: esperamos ela acordar (uma vez por sessão).
+if not st.session_state.api_verificada:
+    with st.spinner("Conectando ao serviço. Na primeira visita isso pode levar até 1 minuto."):
+        aguardar_servico()
+    st.session_state.api_verificada = True
+
 nomes = ["Registrar problema", "Meus protocolos", "Painel da cidade", "Como funciona"]
 telas = [relatar.render, meus_relatos.render, painel.render, sobre.render]
 if st.session_state.perfil == "Gestor":
