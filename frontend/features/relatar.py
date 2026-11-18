@@ -145,24 +145,31 @@ def _revisao() -> None:
             "Defesa Civil (199) ou para os Bombeiros (193).",
             icon=":material/warning:",
         )
-    if analise["fora_do_escopo"]:
-        st.warning(
+    fora = analise["fora_do_escopo"]
+    if fora:
+        texto = (
             "Este serviço trata de problemas em ruas, calçadas e espaços públicos, e o relato parece ser de outro "
-            "tipo. Em emergências, ligue para a Polícia Militar (190), o SAMU (192) ou os Bombeiros (193).",
-            icon=":material/info:",
+            "tipo, por isso não é possível gerar o protocolo aqui."
         )
+        if analise["risco_imediato"]:
+            texto += " Em emergências, ligue para a Polícia Militar (190), o SAMU (192) ou os Bombeiros (193)."
+        else:
+            texto += " Para esse assunto, ligue para o 156 ou acesse o site da Prefeitura (sp156.prefeitura.sp.gov.br)."
+        st.warning(texto, icon=":material/info:")
 
     with st.container(border=True):
         st.markdown("#### Resultado da análise")
         st.markdown(f"{html.escape(analise['resumo'])}")
-        dados([
+        campos = [
             ("Tipo de problema", html.escape(rotulo_categoria(analise["categoria"]))),
             ("Urgência", badge_urgencia(analise["urgencia"])),
             ("Órgão responsável", html.escape(analise["orgao_responsavel"])),
-            ("Prazo de referência", f"Até {analise['prazo_estimado_dias']} dia(s)"),
-        ])
+        ]
+        if not fora:  # fora do escopo não tem reparo, então o prazo enganaria
+            campos.append(("Prazo de referência", f"Até {analise['prazo_estimado_dias']} dia(s)"))
+        dados(campos)
         st.markdown(f"**Motivo da urgência.** {html.escape(analise['justificativa_urgencia'])}")
-        st.markdown("**Orientações até o reparo**")
+        st.markdown("**O que fazer agora**" if fora else "**Orientações até o reparo**")
         for o in analise["orientacoes_cidadao"]:
             st.markdown(f"- {html.escape(o)}")
 
@@ -207,10 +214,15 @@ def _revisao() -> None:
 
     b1, b2, b3, _ = st.columns([1.4, 1, 1, 1.6])
     confirmar = b1.button(
-        "Confirmar e gerar protocolo", type="primary", width="stretch", disabled=analise["fora_do_escopo"]
+        "Confirmar e gerar protocolo", type="primary", width="stretch", disabled=fora
     )
     b2.button("Editar relato", on_click=sessao.voltar_para_edicao, width="stretch")
     b3.button("Cancelar", on_click=sessao.novo_relato, width="stretch")
+    if fora:
+        st.caption(
+            "O botão de confirmar está desativado porque este relato não é de zeladoria urbana. "
+            "Se a análise errou, use Editar relato para ajustar o texto."
+        )
 
     if confirmar:
         with st.spinner("Gerando o protocolo"):
